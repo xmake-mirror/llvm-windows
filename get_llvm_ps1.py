@@ -16,7 +16,7 @@ NEW_PS1_SOURCE = """
 Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-{llvmver}/clang+llvm-{llvmver}-x86_64-pc-windows-msvc.tar.xz" -OutFile "llvm.tar.xz"
 
 if (-not (Get-Command Expand-7Zip -ErrorAction Ignore)) {{
-    Install-Module -Force -Name 7Zip4Powershell -Scope CurrentUser > $null
+    Install-Module -Force -Scope CurrentUser -Name 7Zip4Powershell -Confirm:$false > $null
 }}
 
 Expand-7Zip -ArchiveFileName llvm.tar.xz -TargetPath .\\
