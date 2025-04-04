@@ -1,6 +1,6 @@
 import sys
 
-PS1_SOURCE = """
+WIN32_PS1_SOURCE = """
 New-Item -Path . -Name llvm-install -ItemType "directory"
 $InstallPath = (Resolve-Path -Path .\\llvm-install).Path
 
@@ -9,6 +9,24 @@ Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/l
 
 Remove-Item -Path $InstallPath\\Uninstall.exe
 Compress-Archive -Path $InstallPath\\* -DestinationPath .\\clang+llvm-{llvmver}-win{bits}.zip
+"""
+
+WIN64_PS1_SOURCE = """
+Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-{llvmver}/clang+llvm-{llvmver}-x86_64-pc-windows-msvc.tar.xz" -OutFile "llvm.tar.xz"
+
+if (-not (Get-Command Expand-7Zip -ErrorAction Ignore)) {{
+    Install-Package -Scope CurrentUser -Force 7Zip4PowerShell > $null
+}}
+
+Expand-7Zip -ArchiveFileName llvm.tar.xz -TargetPath .\\
+
+Expand-7Zip -ArchiveFileName llvm.tar -TargetPath .\\
+
+Remove-Item .\llvm.tar
+
+Remove-Item .\llvm.tar.xz
+
+Compress-Archive -Force -Path .\clang+llvm-{llvmver}-x86_64-pc-windows-msvc\\* -DestinationPath .\clang+llvm-{llvmver}-win{bits}.zip
 """
 
 if __name__ == '__main__':
@@ -21,4 +39,7 @@ if __name__ == '__main__':
         bits = sys.argv[2]
 
     with open(f"get_llvm_{llvmver}_{bits}.ps1", "w") as f:
-        f.write(PS1_SOURCE.format(llvmver=llvmver, bits=bits))
+        if bits == "32":
+            f.write(WIN32_PS1_SOURCE.format(llvmver = llvmver, bits = bits))
+        elif bits == "64":
+            f.write(WIN64_PS1_SOURCE.format(llvmver = llvmver, bits = bits))
