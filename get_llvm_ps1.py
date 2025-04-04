@@ -12,10 +12,10 @@ Compress-Archive -Path $InstallPath\\* -DestinationPath .\\clang+llvm-{llvmver}-
 """
 
 WIN64_PS1_SOURCE = """
-Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-{llvmver}/clang+llvm-{llvmver}-x86_64-pc-windows-msvc.tar.xz" -OutFile "llvm.tar.xz"
+Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-{llvmver}/clang+llvm-{llvmver}-x86_64-pc-windows-msvc.tar.xz" -OutFile llvm.tar.xz
 
 if (-not (Get-Command Expand-7Zip -ErrorAction Ignore)) {{
-    Install-Package -Scope CurrentUser -Force 7Zip4PowerShell > $null
+    Install-Module -Force -Scope CurrentUser -Name 7Zip4Powershell -Confirm:$false > $null
 }}
 
 Expand-7Zip -ArchiveFileName llvm.tar.xz -TargetPath .\\
