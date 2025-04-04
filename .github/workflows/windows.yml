@@ -19,7 +19,7 @@ jobs:
         run: |
           python get_llvm_ps1.py ${{ matrix.version }} ${{ matrix.arch }}
           ./get_llvm_${{ matrix.version }}_${{ matrix.arch }}.ps1
-        timeout-minuts: 30
+        timeout-minutes: 30
       - name: publish llvm to release
         uses: svenstaro/upload-release-action@v2
         with:
