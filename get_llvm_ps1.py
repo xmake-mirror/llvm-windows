@@ -1,6 +1,7 @@
 import sys
+from packaging.version import Version
 
-WIN32_PS1_SOURCE = """
+OLD_PS1_SOURCE = """
 New-Item -Path . -Name llvm-install -ItemType "directory"
 $InstallPath = (Resolve-Path -Path .\\llvm-install).Path
 
@@ -11,8 +12,8 @@ Remove-Item -Path $InstallPath\\Uninstall.exe
 Compress-Archive -Path $InstallPath\\* -DestinationPath .\\clang+llvm-{llvmver}-win{bits}.zip
 """
 
-WIN64_PS1_SOURCE = """
-Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-{llvmver}/clang+llvm-{llvmver}-x86_64-pc-windows-msvc.tar.xz" -OutFile llvm.tar.xz
+NEW_PS1_SOURCE = """
+Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-{llvmver}/clang+llvm-{llvmver}-x86_64-pc-windows-msvc.tar.xz" -OutFile "llvm.tar.xz"
 
 if (-not (Get-Command Expand-7Zip -ErrorAction Ignore)) {{
     Install-Module -Force -Scope CurrentUser -Name 7Zip4Powershell -Confirm:$false > $null
@@ -29,6 +30,9 @@ Remove-Item .\llvm.tar.xz
 Compress-Archive -Force -Path .\clang+llvm-{llvmver}-x86_64-pc-windows-msvc\\* -DestinationPath .\clang+llvm-{llvmver}-win{bits}.zip
 """
 
+def no_target(llvmver):
+    return Version(llvmver) < Version("18.1.0") or Version(llvmver) == Version("18.1.3")
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: python " + __file__ + " <version> <bits>")
@@ -40,6 +44,9 @@ if __name__ == '__main__':
 
     with open(f"get_llvm_{llvmver}_{bits}.ps1", "w") as f:
         if bits == "32":
-            f.write(WIN32_PS1_SOURCE.format(llvmver = llvmver, bits = bits))
+            f.write(OLD_PS1_SOURCE.format(llvmver = llvmver, bits = bits))
         elif bits == "64":
-            f.write(WIN64_PS1_SOURCE.format(llvmver = llvmver, bits = bits))
+            if no_target(llvmver):
+                f.write(OLD_PS1_SOURCE.format(llvmver = llvmver, bits = bits))
+            else:
+                f.write(NEW_PS1_SOURCE.format(llvmver = llvmver, bits = bits))
