@@ -1,31 +1,57 @@
-name: windows
+name: build-llvm
 
-on: push
+on:
+  pull_request:
+  push:
+  
 
 jobs:
   llvm:
     strategy:
+      fail-fast: false
       matrix:
-        arch: ["32", "64"]
-        version: ["21.1.0"]
-    runs-on: windows-latest
+        confs:
+          - { name: Windows, runner: windows-latest, plat: windows, arch: "32",     version: "21.1.0", artifact: "clang+llvm-21.1.0-win32.zip"                  }
+          - { name: Windows, runner: windows-latest, plat: windows, arch: "64",     version: "21.1.0", artifact: "clang+llvm-21.1.0-win64.zip"                  }
+          - { name: Linux,   runner: ubuntu-latest,  plat: linux,   arch: x86_64,   version: "21.1.0", artifact: "clang+llvm-21.1.0-x86_64-linux-gnu.tar.gz"   }
+          - { name: Linux,   runner: ubuntu-latest,  plat: linux,   arch: aarch64,  version: "21.1.0", artifact: "clang+llvm-21.1.0-aarch64-linux-gnu.tar.gz"  }
+          - { name: macOS,   runner: macos-latest,   plat: macos,   arch: x86_64,   version: "21.1.0", artifact: "clang+llvm-21.1.0-x86_64-macos.tar.gz"       }
+          - { name: macOS,   runner: macos-14,       plat: macos,   arch: arm64,    version: "21.1.0", artifact: "clang+llvm-21.1.0-arm64-macos.tar.gz"        }
+
+    name: ${{ matrix.confs.name }} ${{ matrix.confs.arch }} ${{ matrix.confs.version }}
+    runs-on: ${{ matrix.confs.runner }}
+    if: ${{ !contains(github.event.head_commit.message, 'ci skip') }}
+
     steps:
-      - name: checkout
-        uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          fetch-depth: 0
-          submodules: false
-      - name: prepare llvm
+          python-version: '3.x'
+
+      - name: Prepare LLVM (Windows)
+        if: matrix.confs.plat == 'windows'
+        shell: pwsh
         run: |
           pip install packaging
-          python get_llvm_ps1.py ${{ matrix.version }} ${{ matrix.arch }}
-          ./get_llvm_${{ matrix.version }}_${{ matrix.arch }}.ps1
-      - name: publish llvm to release
+          python get_llvm_ps1.py ${{ matrix.confs.version }} ${{ matrix.confs.arch }}
+          ./get_llvm_${{ matrix.confs.version }}_${{ matrix.confs.arch }}.ps1
+
+      - name: Prepare LLVM (Linux/macOS)
+        if: matrix.confs.plat != 'windows'
+        run: |
+          pip install packaging
+          python get_llvm_sh.py ${{ matrix.confs.version }} ${{ matrix.confs.arch }}
+          bash get_llvm_${{ matrix.confs.version }}_${{ matrix.confs.arch }}.sh
+
+      - name: Upload to tag release
         uses: svenstaro/upload-release-action@v2
+        if: ${{ startsWith(github.event.ref, 'refs/tags/') }}
         with:
-          repo_name: xmake-mirror/llvm-windows
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: clang+llvm-${{ matrix.version }}-win${{ matrix.arch }}.zip
-          asset_name: clang+llvm-${{ matrix.version }}-win${{ matrix.arch }}.zip
-          tag: "${{ matrix.version }}"
-          body: "llvm for windows ${{ matrix.version }}"
+          file: ${{ matrix.confs.artifact }}
+          asset_name: ${{ matrix.confs.artifact }}
+          tag: ${{ github.ref }}
+          overwrite: true
